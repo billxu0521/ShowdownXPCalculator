@@ -2,11 +2,41 @@
   <div class="container mx-auto py-8">
     <h1 class="text-2xl font-bold mb-4">經驗值計算器</h1>
     <!-- 玩家經驗值輸入區 -->
-    <div class="mb-6">
-      <label for="level">等級 (1-50)：</label>
-      <input v-model.number="playerLevel" type="number" min="1" max="50" id="level" class="w-32 border-2 border-gray-300 rounded-md px-2 py-1 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 hover:border-primary-400 transition-colors" />
-      <label for="exp">目前經驗值：</label>
-      <input v-model.number="playerExp" type="number" min="0" :max="levelExp(playerLevel)" id="exp" class="w-32 border-2 border-gray-300 rounded-md px-2 py-1 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 hover:border-primary-400 transition-colors" />
+    <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+      <div class="flex items-center gap-4 mb-2">
+        <div class="flex items-center gap-2">
+          <label for="level" class="text-sm">等級：</label>
+          <input v-model.number="playerLevel" type="number" min="1" max="50" id="level" 
+            class="w-20 border border-gray-300 rounded px-2 py-1 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-200" />
+        </div>
+        <div class="flex items-center gap-2">
+          <label for="exp" class="text-sm">經驗值：</label>
+          <input v-model.number="playerExp" type="number" min="0" :max="levelExp(playerLevel)" id="exp" 
+            class="w-20 border border-gray-300 rounded px-2 py-1 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-200" />
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center text-xs mb-2">
+        <div class="flex gap-3">
+          <span class="text-primary-500">目前經驗值</span>
+          <span class="text-blue-500">獲得經驗值 <span class="text-blue-500 font-medium">+{{ totalExp }}</span></span>
+        </div>
+       
+      </div>
+
+      <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        <span>獎勵經驗值：{{ getBonusExpForLevel(playerLevel) }}</span>
+        <span>預期等級：{{ getExpectedLevel(playerLevel, playerExp, totalExp) }}</span>
+        <span v-if="playerExp + totalExp >= levelExp(playerLevel)" class="text-green-600 font-bold">
+          可以升級！
+        </span>
+      </div>
+
+      <button v-if="totalExp > 0" 
+        class="mt-2 px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors" 
+        @click="resetCounts">
+        重置點擊
+      </button>
     </div>
     <!-- 經驗值顯示 -->
     <div class="sticky top-0 bg-white z-10 pb-4">
@@ -16,6 +46,7 @@
           <div class="flex justify-between text-sm">
             <span>等級 {{ playerLevel }} 經驗值進度</span>
             <span>{{ playerExp }} / {{ levelExp(playerLevel) }}</span>
+            
           </div>
           <div class="w-full bg-gray-200 rounded-full h-2.5 relative">
             <!-- 目前經驗值進度 -->
@@ -30,40 +61,22 @@
               }">
             </div>
           </div>
-          <div class="flex justify-between text-sm">
-            <div class="flex gap-4">
-              <span class="text-primary-500">目前經驗值</span>
-              <span class="text-blue-500">獲得經驗值</span>
-            </div>
-            <span class="text-blue-500">+{{ totalExp }}</span>
-          </div>
+         
         </div>
 
         <!-- 總經驗值進度 -->
         <div class="flex flex-col gap-1">
           <div class="flex justify-between text-sm">
             <span>總經驗值進度</span>
-            <span>{{ getTotalExpForLevel(playerLevel) + playerExp }} / {{ getTotalExpForLevel(50) }}</span>
+            <span>{{ getTotalExpForLevel(playerLevel) + playerExp + totalExp }} / {{ getTotalExpForLevel(50) }}</span>
           </div>
           <div class="w-full bg-gray-200 rounded-full h-2.5">
             <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-300"
-              :style="{ width: `${((getTotalExpForLevel(playerLevel) + playerExp) / getTotalExpForLevel(50)) * 100}%` }">
+              :style="{ width: `${((getTotalExpForLevel(playerLevel) + playerExp + totalExp) / getTotalExpForLevel(50)) * 100}%` }">
             </div>
           </div>
         </div>
-
-        <!-- 其他資訊 -->
-        <div class="flex flex-col gap-2 text-sm">
-          <span>當前等級獎勵經驗值：{{ getBonusExpForLevel(playerLevel) }}</span>
-          <span>預期到達等級：{{ getExpectedLevel(playerLevel, playerExp, totalExp) }}</span>
-          <span v-if="playerExp + totalExp >= levelExp(playerLevel)" class="text-green-600 font-bold">
-            可以升級！
-          </span>
-        </div>
-
-        <button v-if="totalExp > 0" class="mt-2 w-32 bg-red-500 text-white px-4 py-2 rounded" @click="resetCounts">
-          重置點擊
-        </button>
+    
       </div>
     </div>
 
@@ -72,12 +85,22 @@
       <h2 class="text-xl font-semibold mb-2">怪物/事件列表</h2>
       <div class="grid grid-cols-3 gap-2">
         <div v-for="(item, idx) in monsterList" :key="item.id" 
-          @click="addCount(idx)"
-          class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition aspect-square flex items-center justify-center">
+          class="aspect-square flex items-center justify-center">
           <div class="flex flex-col gap-1 items-center text-center">
             <span class="font-bold">{{ item.name }}</span>
             <span>經驗值：{{ item.exp }}</span>
-            <span>點擊次數：{{ item.count }}</span>
+            <div class="flex items-center gap-2">
+              <button @click="item.count = Math.max(0, item.count - 1)" 
+                class="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition">
+                -
+              </button>
+              <input type="number" v-model.number="item.count" min="0"
+                class="w-16 text-center border-2 border-gray-300 rounded-md px-2 py-1 focus:border-primary-500 focus:ring-2 focus:ring-primary-200">
+              <button @click="item.count++"
+                class="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition">
+                +
+              </button>
+            </div>
           </div>
         </div>
       </div>
